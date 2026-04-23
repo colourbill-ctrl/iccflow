@@ -1,0 +1,71 @@
+.zone {
+  border: 2px dashed var(--border);
+  background: var(--surface-alt);
+  padding: 28px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: default;
+  transition: border-color 0.15s, background 0.15s;
+  user-select: none;
+}
+
+.zone:not(.disabled) { cursor: pointer; }
+.zone:not(.disabled):hover {
+  border-color: var(--accent);
+  background: #fbe6ec;
+}
+
+.dragging {
+  border-color: var(--accent) !important;
+  background: #f4cdd6 !important;
+}
+
+.disabled { opacity: 0.5; }
+
+/* Ghost = visually de-emphasised but interactive (e.g. embedded-ICC mode:
+   the supplied-profile drop zone ghosts to show it's ignored). */
+.ghost {
+  background: var(--ghost);
+  border-color: var(--border-soft);
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.compact {
+  padding: 16px 14px;
+  gap: 6px;
+}
+
+.compact .icon   { font-size: 22px; }
+.compact .headline { font-size: 13px; }
+
+.icon {
+  font-size: 30px;
+  line-height: 1;
+}
+
+.headline {
+  font-family: Arial, Verdana, Helvetica, sans-serif;
+  font-size: 14px;
+  font-weight: bold;
+  color: var(--text);
+  text-align: center;
+}
+
+.sub {
+  color: var(--text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hint {
+  color: var(--text-muted);
+  font-size: 10px;
+  margin-top: 4px;
+  text-align: center;
+}
+
+.hidden { display: none; }

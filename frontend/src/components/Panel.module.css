@@ -1,0 +1,220 @@
+/* Shared styling for the three columns of the iccflow layout. */
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 400px;
+}
+
+.panelHeader {
+  font-family: Arial, Verdana, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+}
+
+/* ── Image thumbnails ─────────────────────────────────────────────────── */
+
+.imageHolder {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  padding: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 180px;
+}
+
+.thumb {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* ── Metadata definition list ─────────────────────────────────────────── */
+
+.meta {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 4px 10px;
+  font-size: 11px;
+  align-items: baseline;
+}
+
+.meta dt {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.4px;
+}
+
+.meta dd {
+  word-break: break-word;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.muted { color: var(--text-muted); }
+
+.badgeYes {
+  color: var(--valid);
+  font-weight: bold;
+}
+
+.badgeNo {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Replace controls ─────────────────────────────────────────────────── */
+
+.replaceBtn {
+  margin-top: auto;
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.replaceInlineBtn {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  font-size: 10px;
+  padding: 2px 8px;
+  align-self: flex-start;
+  margin-top: 4px;
+}
+
+/* ── Use-embedded toggle ───────────────────────────────────────────────── */
+
+.embeddedToggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.embeddedToggle input { margin: 0; }
+
+/* ── ProfileStackPanel ─────────────────────────────────────────────────── */
+
+.profileSlot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profileSlotTitle {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.profileCard {
+  background: var(--surface-alt);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.profileName {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: bold;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.profileMeta {
+  font-size: 11px;
+}
+
+.profileDesc {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  word-break: break-word;
+}
+
+.ghostNote { opacity: 1; }
+
+.intentRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  font-weight: bold;
+}
+
+.intentRow select {
+  flex: 1;
+  padding: 4px 6px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: normal;
+}
+
+.intentDisabled { opacity: 0.5; }
+.intentDisabled select { background: var(--ghost); }
+
+.stackDivider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 2px 0;
+}
+
+/* ── OutputImagePanel ──────────────────────────────────────────────────── */
+
+.outputPlaceholder {
+  background: var(--surface-alt);
+  border: 1px dashed var(--border);
+  padding: 24px 16px;
+  color: var(--text-muted);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 180px;
+  justify-content: center;
+  font-size: 11px;
+}
+
+.outputPlaceholder .icon {
+  font-size: 28px;
+}

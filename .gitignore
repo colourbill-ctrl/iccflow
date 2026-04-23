@@ -1,0 +1,9 @@
+node_modules/
+dist/
+flow-wasm/build/
+
+# editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
