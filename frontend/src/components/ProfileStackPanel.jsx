@@ -106,6 +106,9 @@ function ProfileSlot({ title, profile, onFile, ghostReason, busy }) {
             <strong>{profile.info.dataSpace}</strong>{' '}
             <span className={styles.muted}>({profile.info.deviceClassName})</span>
             {profile.info.description && (
+              // description is pulled from the user-supplied ICC profile's
+              // tag content — untrusted. Safe via JSX string escaping; do
+              // NOT swap to dangerouslySetInnerHTML here.
               <div className={styles.profileDesc}>{profile.info.description}</div>
             )}
           </div>

@@ -80,7 +80,11 @@ set(webp                OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
   tiff
   GIT_REPOSITORY https://gitlab.com/libtiff/libtiff.git
-  GIT_TAG        v4.6.0
+  # v4.7.1 (Dec 2024) rolls up fixes for CVE-2024-7006, CVE-2023-6277, and
+  # several TIFFReadDirectory bounds bugs that matter when the app ingests
+  # arbitrary user TIFFs. Impact is sandboxed by the wasm VM, but keeping
+  # this current avoids user-visible crashes on crafted inputs.
+  GIT_TAG        v4.7.1
   GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(tiff)

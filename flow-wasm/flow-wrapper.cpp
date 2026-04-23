@@ -41,6 +41,25 @@
 
 using json = nlohmann::ordered_json;
 
+// ── Input size caps ─────────────────────────────────────────────────────────
+// The wasm module is built with MAXIMUM_MEMORY=1024MB. Before any fix these
+// limits didn't exist, so a malicious (or just oversized) input could force
+// us to allocate hundreds of megabytes of pixel buffers before the CMM even
+// sees a single pixel. Caps chosen to leave comfortable headroom for
+// src pixels + dst pixels + RGBA preview + CMM internal state in the worst
+// case (4-channel in, 4-channel out, RGBA preview, all float-wide intermediate
+// buffers).
+
+// Raw file size caps — rejected before any parsing.
+static constexpr std::size_t kMaxTiffBytes = 200ULL * 1024 * 1024;   // 200 MB
+static constexpr std::size_t kMaxIccBytes  = 16ULL  * 1024 * 1024;   // 16 MB (iccMAX
+                                                                      // spectral profiles
+                                                                      // can be large)
+// Pixel-count cap — rejected after TIFF header read, before allocating
+// pixel buffers. 25 megapixels × 4 channels × (src + dst + preview) buffers
+// ≈ 400 MB worst-case, comfortably under the 1 GB ceiling.
+static constexpr std::uint64_t kMaxPixels = 25ULL * 1000 * 1000;     // 25 MP
+
 namespace {
 
 // ── MEMFS helpers ───────────────────────────────────────────────────────────
@@ -245,6 +264,14 @@ bool readTiffInfo(const char* path, TiffInfo& info, std::string& err) {
 // ── inspectProfile ──────────────────────────────────────────────────────────
 
 static emscripten::val inspectProfile(emscripten::val bytesVal) {
+  // Size gate before the full convertJSArrayToNumberVector copy inside
+  // openProfile — rejects the pathological "10 GB ICC file" case early.
+  const std::size_t n = bytesVal["length"].as<std::size_t>();
+  if (n > kMaxIccBytes) {
+    return valFromJson({{"status", "error"},
+      {"message", "ICC profile exceeds " + std::to_string(kMaxIccBytes / (1024 * 1024)) + " MB limit"}});
+  }
+
   ProfileHolder pholder;
   std::string err;
   if (!openProfile(bytesVal, pholder, err)) {
@@ -258,10 +285,16 @@ static emscripten::val inspectProfile(emscripten::val bytesVal) {
 // ── inspectTiff ─────────────────────────────────────────────────────────────
 
 static emscripten::val inspectTiff(emscripten::val bytesVal) {
-  auto bytes = emscripten::convertJSArrayToNumberVector<std::uint8_t>(bytesVal);
-  if (bytes.size() < 8) {
+  const std::size_t n = bytesVal["length"].as<std::size_t>();
+  if (n < 8) {
     return valFromJson({{"status", "error"}, {"message", "file too small to be a TIFF"}});
   }
+  if (n > kMaxTiffBytes) {
+    return valFromJson({{"status", "error"},
+      {"message", "TIFF exceeds " + std::to_string(kMaxTiffBytes / (1024 * 1024)) + " MB limit"}});
+  }
+
+  auto bytes = emscripten::convertJSArrayToNumberVector<std::uint8_t>(bytesVal);
 
   const char* path = "/tmp/iccflow_in.tif";
   if (!writeFile(path, bytes.data(), bytes.size())) {
@@ -274,6 +307,15 @@ static emscripten::val inspectTiff(emscripten::val bytesVal) {
   std::remove(path);
   if (!ok) {
     return valFromJson({{"status", "error"}, {"message", err}});
+  }
+
+  // Pixel-count gate for the UI side. applyFlow re-checks — this one just
+  // gives a clearer error at drop time instead of waiting for Process.
+  const std::uint64_t totalPixels =
+      static_cast<std::uint64_t>(t.width) * static_cast<std::uint64_t>(t.height);
+  if (totalPixels > kMaxPixels) {
+    return valFromJson({{"status", "error"},
+      {"message", "image exceeds " + std::to_string(kMaxPixels / 1000000) + " megapixel limit"}});
   }
 
   json r = {
@@ -337,14 +379,26 @@ static emscripten::val applyFlow(
     int dstIntent,
     emscripten::val softProofBytesVal) {  // may be empty; only used for non-RGB dst
 
+  auto fail = [](const std::string& m) {
+    return valFromJson({{"status", "error"}, {"message", m}});
+  };
+
+  // Size gates before convertJSArrayToNumberVector — each ignored blob
+  // still costs a full memcpy into the wasm heap. Reject oversized inputs
+  // at the JS boundary.
+  const std::size_t tiffLen = tiffBytesVal["length"].as<std::size_t>();
+  const std::size_t srcLen  = srcProfileBytesVal["length"].as<std::size_t>();
+  const std::size_t dstLen  = dstProfileBytesVal["length"].as<std::size_t>();
+  const std::size_t spLen   = softProofBytesVal["length"].as<std::size_t>();
+  if (tiffLen > kMaxTiffBytes) return fail("TIFF exceeds " + std::to_string(kMaxTiffBytes / (1024 * 1024)) + " MB limit");
+  if (srcLen  > kMaxIccBytes)  return fail("source profile exceeds "      + std::to_string(kMaxIccBytes  / (1024 * 1024)) + " MB limit");
+  if (dstLen  > kMaxIccBytes)  return fail("destination profile exceeds " + std::to_string(kMaxIccBytes  / (1024 * 1024)) + " MB limit");
+  if (spLen   > kMaxIccBytes)  return fail("soft-proof profile exceeds "  + std::to_string(kMaxIccBytes  / (1024 * 1024)) + " MB limit");
+
   auto tiffBytes = emscripten::convertJSArrayToNumberVector<std::uint8_t>(tiffBytesVal);
   auto srcBytes  = emscripten::convertJSArrayToNumberVector<std::uint8_t>(srcProfileBytesVal);
   auto dstBytes  = emscripten::convertJSArrayToNumberVector<std::uint8_t>(dstProfileBytesVal);
   auto sRgbBytes = emscripten::convertJSArrayToNumberVector<std::uint8_t>(softProofBytesVal);
-
-  auto fail = [](const std::string& m) {
-    return valFromJson({{"status", "error"}, {"message", m}});
-  };
 
   // 1. Decode source TIFF ------------------------------------------------------
   const char* srcPath = "/tmp/iccflow_src.tif";
@@ -375,6 +429,15 @@ static emscripten::val applyFlow(
   if (planar != PLANARCONFIG_CONTIG) {
     TIFFClose(srcTif); std::remove(srcPath);
     return fail("planar (separated) TIFFs are not supported yet — only interleaved");
+  }
+  // Pixel-count gate — reject before the big scanline allocation. The
+  // overflow guard matters too: width * height on 32-bit uints can wrap
+  // silently.
+  const std::uint64_t totalPixels =
+      static_cast<std::uint64_t>(width) * static_cast<std::uint64_t>(height);
+  if (width == 0 || height == 0 || totalPixels > kMaxPixels) {
+    TIFFClose(srcTif); std::remove(srcPath);
+    return fail("image exceeds " + std::to_string(kMaxPixels / 1000000) + " megapixel limit (or has zero dimension)");
   }
 
   // Pull embedded ICC if the user didn't pass a src profile.

@@ -65,6 +65,9 @@ export default function SourceImagePanel({
             <dd>
               {hasEmbedded ? (
                 <span className={styles.badgeYes}>
+                  {/* description is read from the embedded ICC tag — treat as
+                      untrusted. Safe via React's JSX string escaping; do NOT
+                      swap to dangerouslySetInnerHTML here. */}
                   ✓ {image.info.embedded?.description || 'present'}
                 </span>
               ) : (

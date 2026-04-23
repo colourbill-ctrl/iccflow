@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import SourceImagePanel  from './components/SourceImagePanel.jsx'
 import ProfileStackPanel from './components/ProfileStackPanel.jsx'
 import OutputImagePanel  from './components/OutputImagePanel.jsx'
-import { preloadFlow, inspectTiff, inspectProfile, applyFlow } from './lib/flow.js'
+import {
+  preloadFlow, inspectTiff, inspectProfile, applyFlow,
+  MAX_TIFF_BYTES, MAX_ICC_BYTES,
+} from './lib/flow.js'
 import styles from './App.module.css'
 
 /**
@@ -43,6 +46,10 @@ export default function App() {
   const handleImageFile = useCallback(async (file) => {
     setResult(null); setTopError(null)
     if (!file) { setImage(null); return }
+    if (file.size > MAX_TIFF_BYTES) {
+      setTopError(`Image: file is ${(file.size / 1024 / 1024).toFixed(1)} MB — limit is ${MAX_TIFF_BYTES / 1024 / 1024} MB.`)
+      return
+    }
     try {
       const bytes = new Uint8Array(await file.arrayBuffer())
       const info = await inspectTiff(bytes)
@@ -59,6 +66,10 @@ export default function App() {
   const handleSrcFile = useCallback(async (file) => {
     setResult(null); setTopError(null)
     if (!file) { setSrcProfile(null); return }
+    if (file.size > MAX_ICC_BYTES) {
+      setTopError(`Source profile: file is ${(file.size / 1024 / 1024).toFixed(1)} MB — limit is ${MAX_ICC_BYTES / 1024 / 1024} MB.`)
+      return
+    }
     try {
       const bytes = new Uint8Array(await file.arrayBuffer())
       const info = await inspectProfile(bytes)
@@ -74,6 +85,10 @@ export default function App() {
   const handleDstFile = useCallback(async (file) => {
     setResult(null); setTopError(null)
     if (!file) { setDstProfile(null); return }
+    if (file.size > MAX_ICC_BYTES) {
+      setTopError(`Destination profile: file is ${(file.size / 1024 / 1024).toFixed(1)} MB — limit is ${MAX_ICC_BYTES / 1024 / 1024} MB.`)
+      return
+    }
     try {
       const bytes = new Uint8Array(await file.arrayBuffer())
       const info = await inspectProfile(bytes)
@@ -148,7 +163,12 @@ export default function App() {
     const a = document.createElement('a')
     a.href = url
     const stem = (srcFilename || 'image').replace(/\.(tiff?|icc|icm)$/i, '')
-    a.download = `${stem}-flowed.tif`
+    // Strip anything other than filename-safe characters. Browsers already
+    // sanitize `a.download`, but belt-and-braces: ensures tidy output names
+    // when users drop files with spaces / slashes / HTML-ish characters,
+    // and stays correct if a future browser loosens its sanitizer.
+    const safe = stem.replace(/[^A-Za-z0-9._-]/g, '_').slice(0, 120) || 'image'
+    a.download = `${safe}-flowed.tif`
     document.body.appendChild(a); a.click(); a.remove()
     URL.revokeObjectURL(url)
   }, [])

@@ -9,6 +9,12 @@ const WASM_DIR = '/wasm/'
 let modulePromise = null
 let sRgbPromise   = null
 
+// Mirror the C++ caps so the user gets a clearer error before we pay for
+// an ArrayBuffer→Uint8Array→wasm memcpy. Keep these in sync with
+// flow-wrapper.cpp's kMaxTiffBytes / kMaxIccBytes.
+export const MAX_TIFF_BYTES = 200 * 1024 * 1024   // 200 MB
+export const MAX_ICC_BYTES  =  16 * 1024 * 1024   // 16 MB
+
 async function loadModule() {
   if (!modulePromise) {
     modulePromise = (async () => {
@@ -51,7 +57,12 @@ function toError(mod, e) {
   if (mod && mod.getExceptionMessage) {
     try {
       const msg = mod.getExceptionMessage(e)
-      return new Error(Array.isArray(msg) ? (msg[1] || msg[0]) : String(msg))
+      const err = new Error(Array.isArray(msg) ? (msg[1] || msg[0]) : String(msg))
+      // getExceptionMessage bumps embind's exception refcount — release it
+      // so repeated errors (e.g. the user dropping malformed files in a loop)
+      // don't leak wasm heap.
+      try { mod.decrementExceptionRefcount?.(e) } catch {}
+      return err
     } catch {}
   }
   return e instanceof Error ? e : new Error(String(e))
